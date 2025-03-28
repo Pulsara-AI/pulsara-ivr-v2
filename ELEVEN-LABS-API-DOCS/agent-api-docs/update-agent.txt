@@ -1,0 +1,85 @@
+endpoint: /v1/convai/agents/:agent_id
+method: PATCH
+
+headers:
+  - xi-api-key: string (required)
+  - Content-Type: "application/json" (required)
+
+query_parameters:
+  - use_tool_ids: boolean (optional, default: false)
+    # When true, use tool IDs instead of full tool specifications from the payload.
+
+path_parameters:
+  - agent_id: string (required)
+    # The unique identifier of the agent to update.
+
+request_body:
+  conversation_config: any (optional)
+    # New conversation configuration settings (structure similar to creation).
+  platform_settings: any (optional)
+    # New platform-specific settings for the agent.
+  name: string (optional)
+    # A human-friendly name to make the agent easier to find.
+
+sample_cURL: |
+  curl -X PATCH https://api.elevenlabs.io/v1/convai/agents/21m00Tcm4TlvDq8ikWAM \
+       -H "xi-api-key: <apiKey>" \
+       -H "Content-Type: application/json" \
+       -d '{}'
+
+response:
+  agent_id: string
+  name: string
+  conversation_config:
+    asr: object (optional)
+      quality: string (optional, default: "high")
+      provider: string (optional, default: "elevenlabs")
+      user_input_audio_format: enum (optional)
+        # e.g., pcm_8000, pcm_16000, pcm_22050, pcm_24000, pcm_44100, ulaw_8000
+      keywords: list of strings (optional)
+    turn: object (optional)
+      turn_timeout: double (optional, default: 7)
+      mode: enum (optional)
+        allowed: [silence, turn]
+    tts: object (optional)
+      model_id: enum (optional)
+        allowed: [eleven_turbo_v2, eleven_turbo_v2_5, eleven_flash_v2, eleven_flash_v2_5]
+      voice_id: string (optional, default: "cjVigY5qzO86Huf0OWal")
+      agent_output_audio_format: enum (optional)
+        # e.g., pcm_8000, pcm_16000, pcm_22050, pcm_24000, pcm_44100, ulaw_8000
+      optimize_streaming_latency: integer (optional)
+      stability: double (optional, default: 0.5)
+      speed: double (optional, default: 1)
+      similarity_boost: double (optional, default: 0.8)
+      pronunciation_dictionary_locators: list of objects (optional)
+        - pronunciation_dictionary_id: string (required)
+          version_id: string (required)
+    conversation: object (optional)
+      max_duration_seconds: integer (optional, default: 600)
+      client_events: list of enums (optional)
+        # Allowed values include:
+        - conversation_initiation_metadata
+        - asr_initiation_metadata
+        - ping
+        - audio
+        - interruption
+        - user_transcript
+        - agent_response
+        - agent_response_correction
+        - client_tool_call
+        - internal_vad_score
+        - internal_turn_probability
+        - internal_tentative_agent_response
+    language_presets: map (optional)
+      # Key-value pairs of preset configurations.
+    agent: object (optional)
+      first_message: string (optional)
+      language: string (optional)
+  metadata:
+    created_at_unix_secs: integer
+  platform_settings: object (optional)
+    auth: object (optional)
+      enable_auth: boolean (optional, default: false)
+      allowlist: list of objects (optional; each with "hostname": string)
+      shareable_token: string (optional)
+    evaluation: object (optiona

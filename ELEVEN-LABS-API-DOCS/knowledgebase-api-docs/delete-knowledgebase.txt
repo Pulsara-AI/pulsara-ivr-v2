@@ -1,0 +1,20 @@
+endpoint: /v1/convai/knowledge-base/:documentation_id
+method: DELETE
+
+headers:
+  - xi-api-key: string (required)
+
+path_parameters:
+  - documentation_id: string (required)
+    # The unique identifier of the knowledge base document to delete, as returned on document addition.
+
+sample_cURL: |
+  curl -X DELETE https://api.elevenlabs.io/v1/convai/knowledge-base/21m00Tcm4TlvDq8ikWAM \
+       -H "xi-api-key: <apiKey>"
+
+response:
+  key: "value"
+  # A successful deletion returns a simple key/value response.
+
+errors:
+  422: "Conversational AI Delete Knowledge Base Document Request Unprocessable Entity Error"

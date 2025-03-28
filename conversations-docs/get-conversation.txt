@@ -1,0 +1,39 @@
+endpoint: /v1/convai/conversations/:conversation_id
+method: GET
+
+headers:
+  - xi-api-key: string (required)
+
+path_parameters:
+  - conversation_id: string (required)
+    # The unique identifier of the conversation to retrieve.
+
+sample_cURL: |
+  curl https://api.elevenlabs.io/v1/convai/conversations/123 \
+       -H "xi-api-key: <apiKey>"
+
+response:
+  agent_id: string
+  conversation_id: string
+  status: string  # enum; allowed values: processing, done
+  transcript:
+    - role: string  # enum; allowed values: user, agent
+      time_in_call_secs: integer
+      message: string
+      # Optional: tool_calls details may be included here.
+  metadata:
+    start_time_unix_secs: integer
+    call_duration_secs: integer
+    # Optional additional metadata:
+    # cost: integer
+    # deletion_settings: object
+    #   deletion_time_unix_secs: integer (optional)
+    #   deleted_logs_at_time_unix_secs: integer (optional)
+    #   deleted_audio_at_time_unix_secs: integer (optional)
+    #   deleted_transcript_at_time_unix_secs: integer (optional)
+    #   delete_transcript_and_pii: boolean (optional, default: false)
+    #   delete_audio: boolean (optional, default: false)
+    # feedback, charging, and other fields can also be present.
+
+errors:
+  422: "Conversational AI Get Conversation Request Unprocessable Entity Error"

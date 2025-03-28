@@ -1,0 +1,94 @@
+{
+  "restaurant_id": "default",
+  "name": "Pulsara Restaurant Menu",
+  "categories": [
+    {
+      "name": "Appetizers",
+      "items": [
+        {
+          "id": "app1",
+          "name": "Garlic Bread",
+          "description": "Freshly baked bread with garlic butter and herbs",
+          "price": 5.99,
+          "is_available": true,
+          "order_position": 1
+        },
+        {
+          "id": "app2",
+          "name": "Mozzarella Sticks",
+          "description": "Breaded mozzarella sticks served with marinara sauce",
+          "price": 7.99,
+          "is_available": true,
+          "order_position": 2
+        },
+        {
+          "id": "app3",
+          "name": "Chicken Wings",
+          "description": "Crispy chicken wings with your choice of sauce: Buffalo, BBQ, or Honey Garlic",
+          "price": 9.99,
+          "is_available": true,
+          "order_position": 3
+        }
+      ]
+    },
+    {
+      "name": "Main Courses",
+      "items": [
+        {
+          "id": "main1",
+          "name": "Spaghetti Bolognese",
+          "description": "Classic spaghetti with rich meat sauce and parmesan cheese",
+          "price": 12.99,
+          "is_available": true,
+          "order_position": 1
+        },
+        {
+          "id": "main2",
+          "name": "Margherita Pizza",
+          "description": "Traditional pizza with tomato sauce, fresh mozzarella, and basil",
+          "price": 14.99,
+          "is_available": true,
+          "order_position": 2
+        },
+        {
+          "id": "main3",
+          "name": "Chicken Parmesan",
+          "description": "Breaded chicken breast topped with marinara sauce and melted cheese, served with pasta",
+          "price": 16.99,
+          "is_available": true,
+          "order_position": 3
+        }
+      ]
+    },
+    {
+      "name": "Desserts",
+      "items": [
+        {
+          "id": "des1",
+          "name": "Tiramisu",
+          "description": "Classic Italian dessert with layers of coffee-soaked ladyfingers and mascarpone cream",
+          "price": 6.99,
+          "is_available": true,
+          "order_position": 1
+        },
+        {
+          "id": "des2",
+          "name": "Cheesecake",
+          "description": "New York style cheesecake with graham cracker crust",
+          "price": 5.99,
+          "is_available": true,
+          "order_position": 2
+        },
+        {
+          "id": "des3",
+          "name": "Ice Cream",
+          "description": "Three scoops of vanilla, chocolate, or strawberry ice cream",
+          "price": 4.99,
+          "is_available": true,
+          "order_position": 3
+        }
+      ]
+    }
+  ],
+  "last_updated": "2025-03-19T00:00:00Z"
+}

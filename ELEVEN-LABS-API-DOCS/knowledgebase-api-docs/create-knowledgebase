@@ -1,0 +1,62 @@
+Create knowledge base document
+POST
+
+
+https://api.elevenlabs.io
+/v1/convai/knowledge-base
+Upload a file or webpage URL to create a knowledge base document.
+After creating the document, update the agent’s knowledge base by calling Update agent.
+
+Request
+This endpoint expects a multipart form containing an optional file.
+name
+string
+Optional
+A custom, human-readable name for the document.
+
+url
+string
+Optional
+URL to a page of documentation that the agent will have access to in order to interact with users.
+
+file
+file
+Optional
+Documentation that the agent will have access to in order to interact with users.
+
+Response
+Successful Response
+
+id
+string
+prompt_injectable
+boolean
+Errors
+
+422
+Conversational AI Add to Knowledge Base Request Unprocessable Entity Error
+POST
+
+/v1/convai/knowledge-base
+
+Python
+
+import requests
+url = "https://api.elevenlabs.io/v1/convai/knowledge-base"
+files = { "file": "open('<file1>', 'rb')" }
+payload = {
+    "name": ,
+    "url": 
+}
+headers = {"xi-api-key": "<apiKey>"}
+response = requests.post(url, data=payload, files=files, headers=headers)
+print(response.json())
+
+Try it
+200
+Successful
+
+{
+  "id": "id",
+  "prompt_injectable": true
+}

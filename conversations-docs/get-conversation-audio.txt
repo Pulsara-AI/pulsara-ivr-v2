@@ -1,0 +1,20 @@
+endpoint: /v1/convai/conversations/:conversation_id/audio
+method: GET
+
+headers:
+  - xi-api-key: string (required)
+
+path_parameters:
+  - conversation_id: string (required)
+    # The unique identifier of the conversation for which to retrieve the audio recording.
+
+sample_cURL: |
+  curl https://api.elevenlabs.io/v1/convai/conversations/21m00Tcm4TlvDq8ikWAM/audio \
+       -H "xi-api-key: <apiKey>"
+
+response:
+  # The response will provide the audio recording for the specified conversation.
+  # (Details about the response payload are not provided in the documentation sample.)
+
+errors:
+  422: "Conversational AI Get Conversation Audio Request Unprocessable Entity Error"

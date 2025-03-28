@@ -1,0 +1,145 @@
+# Pulsara IVR v2 - Product Requirements Document (PRD)
+
+## 1. Introduction
+
+### 1.1 Overview
+Pulsara IVR v2 is an **AI-powered phone system for restaurants** that ensures **no missed calls**, provides **basic automated responses**, and **forwards calls dynamically** to restaurant staff when needed. Unlike traditional IVR systems, Pulsara is designed to be **scalable across multiple restaurants** while maintaining a **simple and efficient** workflow.
+
+### 1.2 Business Goals
+The primary goal of IVR v2 is to create a **scalable**, **configurable**, and **future-proof** AI phone system for restaurants. It must:
+- **Eliminate missed calls** by ensuring that every call is handled.
+- **Reduce staff workload** by answering simple questions automatically.
+- **Seamlessly forward calls** when necessary without requiring manual intervention.
+- **Support multiple restaurants dynamically**, without hardcoded values.
+- **Allow for future expansion** into analytics, self-serve portals, and email notifications.
+
+---
+
+## 2. Key Product Features
+
+### 2.1 Core Features in IVR v2
+✅ **Automated Call Handling** → Uses **Twilio** to receive and process calls.  
+✅ **Dynamic Restaurant Identification** → Calls are matched to the correct restaurant **using a database lookup**.  
+✅ **Call Forwarding to Restaurant** → Calls are **automatically forwarded** to the restaurant's phone when human assistance is needed.  
+✅ **Call Logging for Future Analytics** → Basic call logs are stored for **insights and reporting**.  
+✅ **Future-Proof API Architecture** → The system is built with **scalability in mind**, allowing for new features like **email alerts, analytics, and self-serve restaurant portals**.
+
+---
+
+## 3. User Stories
+
+### **3.1 As a Restaurant Owner**
+- I want **every call to be answered** so I don’t lose customers.
+- I want **routine questions (e.g., hours, location) handled automatically**.
+- I want **calls seamlessly forwarded to my restaurant** when needed.
+- I want **insights on call volume** so I can track customer engagement.
+- I want **to keep my existing phone number** without disruption.
+
+### **3.2 As a Customer Calling a Restaurant**
+- I want **an immediate, professional response** when I call.
+- I want **to quickly get answers to basic questions** (hours, location).
+- I want **to be transferred to a human if needed**.
+- I want **clear, natural-sounding AI responses**.
+
+---
+
+## 4. System Workflow
+
+### **4.1 Call Handling Flow**
+1. **Customer calls the restaurant’s existing phone number.**
+2. **Twilio forwards the call to Pulsara IVR.**
+3. **Pulsara API identifies the restaurant dynamically.**
+4. **AI determines if the call should be handled or forwarded.**
+5. **If necessary, the call is forwarded to the restaurant’s main phone number.**
+6. **Call details are logged for future analytics.**
+   +--------------+       +-------------+       +------------+
+   |   Twilio     | ----> |  Pulsara API | ----> |  Database  |
+   +--------------+       +-------------+       +------------+
+          |                     |
+          |                     |
+          |                     V
+          |              +------------------+
+          |              |  ElevenLabs AI   |
+          |              +------------------+
+          |                     |
+          |                     V
+          |              +------------------+
+          |              |   Call Logging   |
+          |              +------------------+
+          ---
+
+## 5. Technical Considerations
+
+### **5.1 API Design**
+IVR v2 will operate with a **single API** that supports **multiple restaurants dynamically**. 
+
+#### **5.1.1 API Endpoints**
+- **`/twilio/inbound_call`** → Receives calls and identifies the restaurant.
+- **`/api/tools/forward_call`** → Forwards calls to the restaurant.
+- **`/api/logs/store_call`** → Stores call details for analytics.
+
+#### **5.1.2 Database Schema**
+Stores **restaurant settings, phone numbers, and call logs**.
+```json
+{
+  "restaurant_id": "d34db33f",
+  "name": "Pulsara Restaurant",
+  "twilio_number": "+15550001111",
+  "forwarding_number": "+15557654321",
+  "email": "owner@example.com",
+  "business_hours": {
+    "monday": "10:00 AM - 9:00 PM",
+    "tuesday": "10:00 AM - 9:00 PM"
+  }
+}
+6. Future Expansion Areas
+
+While IVR v2 focuses on scalability and reliability, the system is designed to support future enhancements:
+
+6.1 Email Notifications (Future)
+	•	Send real-time email alerts to restaurant owners for every call.
+	•	Include call duration, caller number, and AI interaction details.
+
+6.2 Analytics Dashboard (Future)
+	•	Provide insights on call volume, missed calls, and forwarded calls.
+	•	Help restaurant owners optimize customer service.
+
+6.3 Self-Serve Restaurant Portal (Future)
+	•	Allow restaurant owners to manage their own call settings.
+	•	Let owners update menus, forwarding numbers, and hours.
+
+⸻
+
+7. Deployment Strategy
+
+7.1 Infrastructure
+	•	Backend: FastAPI (Python) hosted on AWS/GCP.
+	•	Database: PostgreSQL or Firebase for scalability.
+	•	Logging & Monitoring: CloudWatch/Prometheus for API health tracking.
+
+7.2 Deployment Pipeline
+	•	Staging Environment for testing before release.
+	•	CI/CD Pipeline for automated API updates.
+	•	Failover Mechanisms for uninterrupted Twilio call handling.
+
+⸻
+
+8. Summary & Next Steps
+
+8.1 Why IVR v2?
+
+✅ Scalable across multiple restaurants (no hardcoded values).
+✅ Simple but effective call handling (AI + forwarding).
+✅ Lays the foundation for analytics and email notifications.
+
+8.2 Immediate Next Steps
+
+1️⃣ Set up the database schema for multi-restaurant support.
+2️⃣ Modify Twilio webhook logic to pull restaurant settings dynamically.
+3️⃣ Implement basic call forwarding & logging.
+4️⃣ Test failover scenarios to ensure call reliability.
+
+⸻
+
+🔥 This PRD keeps IVR v2 focused, scalable, and ready for future growth. 🚀
+Let me know if you want any modifications!

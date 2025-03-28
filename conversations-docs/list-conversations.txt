@@ -1,0 +1,39 @@
+endpoint: /v1/convai/conversations
+method: GET
+
+headers:
+  - xi-api-key: string (required)
+
+query_parameters:
+  - cursor: string (optional)
+    # Used for pagination. Returned in the previous response to fetch the next page.
+  - agent_id: string (optional)
+    # Restrict conversations to a specific agent.
+  - call_successful: enum (optional)
+    allowed:
+      - success
+      - failure
+      - unknown
+    # Filter conversations based on the call success evaluation.
+  - page_size: integer (optional, default: 30, allowed: 1 to 100)
+    # Maximum number of conversations to return.
+
+sample_cURL: |
+  curl https://api.elevenlabs.io/v1/convai/conversations \
+       -H "xi-api-key: <apiKey>"
+
+response:
+  conversations:
+    - agent_id: string
+      conversation_id: string
+      start_time_unix_secs: integer
+      call_duration_secs: integer
+      message_count: integer
+      status: string  # e.g., "processing"
+      call_successful: string  # allowed: success, failure, unknown
+      agent_name: string
+  has_more: boolean
+  next_cursor: string  # optional, used for pagination
+
+errors:
+  422: "Conversational AI Get Conversations Request Unprocessable Entity Error"

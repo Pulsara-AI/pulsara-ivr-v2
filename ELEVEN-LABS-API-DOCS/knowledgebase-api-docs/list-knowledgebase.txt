@@ -1,0 +1,29 @@
+endpoint: /v1/convai/knowledge-base
+method: GET
+
+headers:
+  - xi-api-key: string (required)
+
+sample_cURL: |
+  curl https://api.elevenlabs.io/v1/convai/knowledge-base \
+       -H "xi-api-key: <apiKey>"
+
+response:
+  documents: 
+    - id: string
+      name: string
+      type: string  # e.g., "file"
+      metadata:
+        created_at_unix_secs: integer
+        last_updated_at_unix_secs: integer
+        size_bytes: integer
+      prompt_injectable: boolean
+      dependent_agents:
+        - type: string  # e.g., "available"
+          access_level: string  # e.g., "admin"
+          created_at_unix_secs: integer
+          id: string
+          name: string
+      access_level: string  # e.g., "admin"
+  has_more: boolean
+  next_cursor: string

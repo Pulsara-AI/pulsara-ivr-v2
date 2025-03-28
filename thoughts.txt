@@ -1,0 +1,219 @@
+# Pulsara IVR v2 API Schema Analysis
+
+## Current System Overview
+- System uses ElevenLabs AI and Twilio for restaurant phone answering
+- Currently hardcoded for a single restaurant with fixed values in config.py
+- Uses webhooks for agent tools (end_call, get_address, forward_call)
+- No actual database implementation yet, just placeholders in the architecture
+
+## Agent Configuration
+- Agent is configured via ElevenLabs API with system prompt in systemprompt.py
+- Agent has tools defined for ending calls, getting address, and forwarding calls
+- Agent ID is stored in environment variables
+- Voice ID is hardcoded in config.py
+
+## Current Limitations
+- Restaurant information (name, address, phone) hardcoded in config.py
+- No multi-restaurant support implemented yet
+- Empty directories for api/, data/, docs/, utils/ suggest planned but not implemented features
+- No database schema or implementation for restaurant profiles
+
+## API Schema Considerations for Dashboard
+
+### Restaurant Management
+- Need API endpoints for CRUD operations on restaurant profiles
+- Each restaurant needs unique identification for routing calls correctly
+- Restaurant profile should include name, address, phone numbers, business hours
+
+### Agent Configuration
+- Need API to create/update agents per restaurant
+- Each restaurant should have its own ElevenLabs agent
+- System prompt should be templated with restaurant-specific information
+
+### Call Handling
+- Need API endpoints to configure call forwarding rules
+- Should support conditional forwarding based on business hours, call volume
+- Need to track call history and outcomes per restaurant
+
+### Knowledge Base Management
+- Need API to manage restaurant-specific knowledge (menu, specials, etc.)
+- Should support uploading documents or structured data
+- Need versioning for knowledge updates
+
+### Analytics & Reporting
+- Need API endpoints to retrieve call statistics
+- Should support filtering by date range, call outcome, etc.
+- Dashboard should visualize call volume, duration, outcomes
+
+### User Management
+- Need multi-level access control (admin vs restaurant owner)
+- Restaurant owners should only access their own data
+- Admins should have global access to all restaurants
+
+## Proposed Dashboard API Schema
+- /api/restaurants - CRUD for restaurant profiles
+- /api/restaurants/{id}/agent - Configure restaurant's AI agent
+- /api/restaurants/{id}/knowledge - Manage restaurant-specific knowledge
+- /api/restaurants/{id}/calls - View call history and statistics
+- /api/restaurants/{id}/settings - Configure call handling rules
+- /api/users - Manage dashboard users and permissions
+- /api/analytics - Aggregate statistics across restaurants
+- /api/webhooks - Configure webhook endpoints for agent tools
+
+## Key Modularization Points
+- Restaurant profile data should be moved from config.py to database
+- System prompt should be templated with restaurant-specific variables
+- Agent creation/configuration should be automated per restaurant
+- Webhook endpoints should include restaurant ID for context
+- Call forwarding should use restaurant-specific phone numbers
+
+## Dashboard Requirements
+- Admin portal for Waleed to manage all restaurants
+- Restaurant portal for owners to manage their specific restaurant
+- Real-time call monitoring and statistics
+- Menu and knowledge base management interface
+- Agent configuration and testing tools
+- User management and access control
+
+## Technical Considerations
+- Need database schema for restaurant profiles
+- Need authentication and authorization system
+- Need API versioning strategy
+- Consider rate limiting for API endpoints
+- Need error handling and logging strategy
+- Consider webhook security (authentication tokens)
+
+## Proposed Database Schema
+
+### Restaurants Table
+- id: UUID (primary key)
+- name: String
+- address: String
+- phone_number: String
+- forwarding_number: String
+- business_hours: JSON
+- created_at: Timestamp
+- updated_at: Timestamp
+
+### Agents Table
+- id: UUID (primary key)
+- restaurant_id: UUID (foreign key)
+- elevenlabs_agent_id: String
+- voice_id: String
+- system_prompt: Text
+- created_at: Timestamp
+- updated_at: Timestamp
+
+### Calls Table
+- id: UUID (primary key)
+- restaurant_id: UUID (foreign key)
+- call_sid: String
+- stream_sid: String
+- caller_number: String
+- start_time: Timestamp
+- end_time: Timestamp
+- duration: Integer
+- forwarded: Boolean
+- forwarded_to: String
+- transcript: Text
+- created_at: Timestamp
+
+### Knowledge Base Table
+- id: UUID (primary key)
+- restaurant_id: UUID (foreign key)
+- elevenlabs_kb_id: String
+- name: String
+- type: String (menu, hours, specials, etc.)
+- content: Text
+- created_at: Timestamp
+- updated_at: Timestamp
+
+### Users Table
+- id: UUID (primary key)
+- email: String
+- password_hash: String
+- role: String (admin, restaurant_owner)
+- created_at: Timestamp
+- updated_at: Timestamp
+
+### Restaurant Users Table
+- user_id: UUID (foreign key)
+- restaurant_id: UUID (foreign key)
+- role: String (owner, manager, staff)
+- created_at: Timestamp
+- updated_at: Timestamp
+
+## Detailed API Endpoints
+
+### Restaurant Management
+- GET /api/restaurants - List all restaurants (admin only)
+- GET /api/restaurants/{id} - Get restaurant details
+- POST /api/restaurants - Create new restaurant
+- PUT /api/restaurants/{id} - Update restaurant
+- DELETE /api/restaurants/{id} - Delete restaurant
+
+### Agent Management
+- GET /api/restaurants/{id}/agent - Get agent configuration
+- POST /api/restaurants/{id}/agent - Create/update agent
+- POST /api/restaurants/{id}/agent/test - Test agent with sample input
+- GET /api/restaurants/{id}/agent/tools - List available agent tools
+- POST /api/restaurants/{id}/agent/tools - Configure agent tools
+
+### Knowledge Base Management
+- GET /api/restaurants/{id}/knowledge - List knowledge base items
+- GET /api/restaurants/{id}/knowledge/{kb_id} - Get knowledge base item
+- POST /api/restaurants/{id}/knowledge - Add knowledge base item
+- PUT /api/restaurants/{id}/knowledge/{kb_id} - Update knowledge base item
+- DELETE /api/restaurants/{id}/knowledge/{kb_id} - Delete knowledge base item
+
+### Call Management
+- GET /api/restaurants/{id}/calls - List calls
+- GET /api/restaurants/{id}/calls/{call_id} - Get call details
+- GET /api/restaurants/{id}/calls/stats - Get call statistics
+- POST /api/restaurants/{id}/calls/forward - Configure call forwarding
+
+### User Management
+- GET /api/users - List users (admin only)
+- GET /api/users/{id} - Get user details
+- POST /api/users - Create user
+- PUT /api/users/{id} - Update user
+- DELETE /api/users/{id} - Delete user
+- POST /api/auth/login - User login
+- POST /api/auth/logout - User logout
+- POST /api/auth/reset-password - Reset password
+
+### Webhook Configuration
+- GET /api/webhooks - List webhook configurations
+- POST /api/webhooks - Create webhook configuration
+- PUT /api/webhooks/{id} - Update webhook configuration
+- DELETE /api/webhooks/{id} - Delete webhook configuration
+
+## Implementation Recommendations
+
+### Phase 1: Database & Core API
+1. Set up database schema for restaurants, agents, and users
+2. Create basic CRUD API for restaurant management
+3. Implement authentication and authorization
+4. Create agent configuration API that interfaces with ElevenLabs
+5. Modify main.py to use database for restaurant identification
+
+### Phase 2: Dashboard Development
+1. Develop admin portal for managing all restaurants
+2. Create restaurant owner portal with limited access
+3. Implement call history and analytics visualizations
+4. Build knowledge base management interface
+5. Create agent configuration UI with testing capabilities
+
+### Phase 3: Integration & Testing
+1. Integrate Twilio webhook with restaurant identification
+2. Set up ElevenLabs agent creation/management workflow
+3. Implement dynamic system prompt generation
+4. Test call handling with multiple restaurants
+5. Monitor and optimize API performance
+
+## Conclusion
+The Pulsara IVR v2 dashboard needs to transform a currently hardcoded single-restaurant implementation into a scalable multi-restaurant platform. The key to this transition lies in properly designing the API schema to support restaurant-specific agents, knowledge bases, and call routing.
+
+The dashboard will need two distinct interfaces - an admin portal for global management and a restaurant portal for individual restaurant management. This separation ensures restaurant owners can only access their own data while providing Waleed with comprehensive management capabilities.
+
+By implementing the proposed database schema and API endpoints, the system will gain the modularity needed to support multiple restaurants while maintaining the high-quality AI conversation experience for callers.

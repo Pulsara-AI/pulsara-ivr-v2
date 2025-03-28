@@ -1,0 +1,20 @@
+endpoint: /v1/convai/conversations/:conversation_id
+method: DELETE
+
+headers:
+  - xi-api-key: string (required)
+
+path_parameters:
+  - conversation_id: string (required)
+    # The unique identifier of the conversation to delete.
+
+sample_cURL: |
+  curl -X DELETE https://api.elevenlabs.io/v1/convai/conversations/21m00Tcm4TlvDq8ikWAM \
+       -H "xi-api-key: <apiKey>"
+
+response:
+  key: "value"
+  # A simple key/value response indicating the conversation was deleted.
+
+errors:
+  422: "Conversational AI Delete Conversation Request Unprocessable Entity Error"

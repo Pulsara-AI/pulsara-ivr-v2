@@ -1,0 +1,156 @@
+endpoint: /v1/convai/agents/create
+method: POST
+
+headers:
+  - xi-api-key: string (required)
+  - Content-Type: "application/json" (required)
+
+query_parameters:
+  - use_tool_ids: boolean (optional, default: false)
+    # When true, use tool IDs instead of full tool specs from the payload.
+
+request_body:
+  conversation_config: object (required)
+    asr: object (optional)
+      quality: string (optional, default: "high")
+      provider: string (optional, default: "elevenlabs")
+      user_input_audio_format: enum (optional)
+        # (6 possible values, e.g., pcm_8000, pcm_16000, etc.)
+      keywords: list of strings (optional)
+    turn: object (optional)
+      turn_timeout: double (optional, default: 7)
+      mode: enum (optional)
+        allowed: [silence, turn]
+    tts: object (optional)
+      model_id: enum (optional)
+        allowed: [eleven_turbo_v2, eleven_turbo_v2_5, eleven_flash_v2, eleven_flash_v2_5]
+      voice_id: string (optional, default: "cjVigY5qzO86Huf0OWal")
+      agent_output_audio_format: enum (optional)
+        # (e.g., pcm_8000, pcm_16000, pcm_22050, pcm_24000, pcm_44100, ulaw_8000)
+      optimize_streaming_latency: integer (optional)
+      stability: double (optional, range: 0 to 1, default: 0.5)
+      speed: double (optional, range: 0.7 to 1.2, default: 1)
+      similarity_boost: double (optional, range: 0 to 1, default: 0.8)
+      pronunciation_dictionary_locators: list of objects (optional)
+        - pronunciation_dictionary_id: string (required)
+          version_id: string (required)
+    conversation: object (optional)
+      max_duration_seconds: integer (optional, default: 600)
+      client_events: list of enums (optional)
+        allowed:
+          - conversation_initiation_metadata
+          - asr_initiation_metadata
+          - ping
+          - audio
+          - interruption
+          - user_transcript
+          - agent_response
+          - agent_response_correction
+          - client_tool_call
+          - internal_vad_score
+          - internal_turn_probability
+          - internal_tentative_agent_response
+      language_presets: map (string -> object) (optional)
+      overrides: object (required)
+      agent: object (optional)
+    first_message_translation: object (optional)
+      source_hash: string (required)
+      text: string (required)
+      agent: object (optional)
+    first_message: string (optional)
+    language: string (optional, default: "en")
+    dynamic_variables: object (optional)
+      dynamic_variable_placeholders:
+        map (string -> (string | double | integer | boolean)) (optional)
+    prompt: object (optional)
+      prompt: string (optional)
+      llm: enum (optional)
+        allowed:
+          - gpt-4o-mini
+          - gpt-4o
+          - gpt-4
+          - gpt-4-turbo
+          - gpt-3.5-turbo
+          - gemini-1.5-pro
+          - gemini-1.5-flash
+          - gemini-2.0-flash-001
+          - gemini-2.0-flash-lite
+          - gemini-1.0-pro
+          - claude-3-7-sonnet
+          - claude-3-5-sonnet
+          - claude-3-5-sonnet-v1
+          - claude-3-haiku
+          - grok-beta
+          - custom-llm
+      temperature: double (optional, default: 0)
+      max_tokens: integer (optional, default: -1)
+    tools: list of objects (optional)
+      # Supports multiple tool types:
+      - client_tool: object (one variant)
+          type: "client" (required)
+          description: string (required)
+          name: string (required, pattern: "^[a-zA-Z0-9_-]{1,64}$")
+          dynamic_variables: object (optional)
+          expects_response: boolean (optional, default: false)
+          parameters: object (optional)
+          response_timeout_secs: integer (optional, range: 1 to 30)
+      - system_tool: object (one variant)
+          type: "system" (required)
+          description: string (required)
+          name: string (required, pattern: "^[a-zA-Z0-9_-]{1,64}$")
+      - webhook_tool: object (one variant)
+          type: "webhook" (required)
+          api_schema: object (required)
+          description: string (required)
+          name: string (required, pattern: "^[a-zA-Z0-9_-]{1,64}$")
+          dynamic_variables: object (optional)
+      # Alternatively, you can provide:
+      tool_ids: list of strings (optional)
+      knowledge_base: list of objects (optional)
+      custom_llm: object (optional)
+      rag: object (optional)
+    platform_settings: object (optional)
+      auth: object (optional)
+        enable_auth: boolean (optional, default: false)
+        allowlist: list of objects (optional; each with "hostname": string)
+        shareable_token: string (optional)
+      evaluation: object (optional)
+        criteria: list of objects (optional)
+          - id: string (required)
+          - conversation_goal_prompt: string (required, max 800 characters)
+          - name: string (optional)
+          - type: string (optional, default: "prompt")
+          - use_knowledge_base: boolean (optional, default: false)
+      widget: object (optional)
+        # Multiple widget customization properties (e.g., variant, expandable, avatar, colors, texts, etc.)
+      data_collection: map (string -> object) (optional)
+        # Each entry:
+        #   type: enum (required, allowed: [boolean, string, integer, number])
+        #   description: string (optional)
+        #   dynamic_variable: string (optional, default: "constant_value")
+      overrides: object (optional)
+        conversation_config_override: object (optional)
+      call_limits: object (optional)
+        agent_concurrency_limit: integer (optional, default: -1)
+        daily_limit: integer (optional, default: 100000)
+      ban: object (optional)
+        at_unix: integer (required)
+        reason_type: enum (required, allowed: [safety, manual])
+        reason: string (optional)
+      privacy: object (optional)
+        record_voice: boolean (optional, default: true)
+        retention_days: integer (optional, default: -1)
+        delete_transcript_and_pii: boolean (optional, default: false)
+        delete_audio: boolean (optional, default: false)
+        apply_to_existing_conversations: boolean (optional, default: false)
+      safety: object (optional)
+        ivc: object (optional)
+        non_ivc: object (optional)
+    name: string (optional)
+      # A human-friendly name to identify the agent.
+
+response:
+  agent_id: string
+
+errors:
+  422: "Conversational AI Create Agent Request Unprocessable Entity"

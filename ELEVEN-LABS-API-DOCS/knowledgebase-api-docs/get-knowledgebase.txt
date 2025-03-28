@@ -1,0 +1,28 @@
+endpoint: /v1/convai/knowledge-base/:documentation_id
+method: GET
+
+headers:
+  - xi-api-key: string (required)
+
+path_parameters:
+  - documentation_id: string (required)
+    # The unique identifier of a document from the knowledge base (returned on document addition).
+
+sample_cURL: |
+  curl https://api.elevenlabs.io/v1/convai/knowledge-base/21m00Tcm4TlvDq8ikWAM \
+       -H "xi-api-key: <apiKey>"
+
+response:
+  id: string
+  name: string
+  type: string  # enum; allowed values: file, url
+  metadata:
+    created_at_unix_secs: integer
+    last_updated_at_unix_secs: integer
+    size_bytes: integer
+  extracted_inner_html: string
+  prompt_injectable: boolean
+  access_level: string  # enum; allowed values: admin, editor, viewer
+
+errors:
+  422: "Conversational AI Get Knowledge Base Document by ID Request Unprocessable Entity Error"
