@@ -3,34 +3,17 @@ Restaurant management module for Pulsara IVR v2.
 """
 
 from typing import Dict, Optional, List
-from app.models.schemas import Restaurant
-from config.settings import RESTAURANT
+from app.models.schemas import Restaurant as RestaurantSchema
+from app.models.database_models import Restaurant as RestaurantModel
+from app.db import get_db, SessionLocal
 from app.utils.logging import get_logger
+import uuid
 
 logger = get_logger(__name__)
 
-# In-memory restaurant cache
-# This will be replaced with a database in the future
-_restaurants = {}
-
-def initialize_default_restaurant():
+def get_restaurant_by_id(restaurant_id: str) -> Optional[RestaurantSchema]:
     """
-    Initialize the default restaurant from settings.
-    """
-    default_restaurant = Restaurant(
-        id="default",
-        name=RESTAURANT["name"],
-        address=RESTAURANT["address"],
-        phone=RESTAURANT["phone"],
-        timezone=RESTAURANT["timezone"].zone
-    )
-    _restaurants[default_restaurant.id] = default_restaurant
-    logger.info(f"Initialized default restaurant: {default_restaurant.name}")
-    return default_restaurant
-
-def get_restaurant_by_id(restaurant_id: str) -> Optional[Restaurant]:
-    """
-    Get a restaurant by ID.
+    Get a restaurant by ID from the database.
     
     Args:
         restaurant_id: The restaurant ID
@@ -38,11 +21,37 @@ def get_restaurant_by_id(restaurant_id: str) -> Optional[Restaurant]:
     Returns:
         The restaurant or None if not found
     """
-    return _restaurants.get(restaurant_id)
+    if not restaurant_id:
+        logger.warning("Tried to get restaurant with empty ID")
+        return None
+        
+    try:
+        db = SessionLocal()
+        restaurant_db = db.query(RestaurantModel).filter(RestaurantModel.id == restaurant_id).first()
+        db.close()
+        
+        if not restaurant_db:
+            logger.warning(f"Restaurant not found with ID: {restaurant_id}")
+            return None
+            
+        # Convert database model to schema model for API responses
+        restaurant = RestaurantSchema(
+            id=restaurant_db.id,
+            name=restaurant_db.name,
+            address=restaurant_db.address or "",
+            phone=restaurant_db.phone or "",
+            timezone=restaurant_db.timezone if hasattr(restaurant_db, 'timezone') else "America/Chicago"
+        )
+        
+        return restaurant
+    except Exception as e:
+        logger.error(f"Error fetching restaurant by ID {restaurant_id}: {e}")
+        db.close()
+        return None
 
-def get_restaurant_by_phone(phone: str) -> Optional[Restaurant]:
+def get_restaurant_by_phone(phone: str) -> Optional[RestaurantSchema]:
     """
-    Get a restaurant by phone number.
+    Get a restaurant by phone number from the database.
     
     Args:
         phone: The restaurant phone number
@@ -50,73 +59,99 @@ def get_restaurant_by_phone(phone: str) -> Optional[Restaurant]:
     Returns:
         The restaurant or None if not found
     """
-    for restaurant in _restaurants.values():
-        if restaurant.phone == phone:
-            return restaurant
-    return None
+    if not phone:
+        logger.warning("Tried to get restaurant with empty phone number")
+        return None
+        
+    try:
+        db = SessionLocal()
+        restaurant_db = db.query(RestaurantModel).filter(RestaurantModel.phone == phone).first()
+        db.close()
+        
+        if not restaurant_db:
+            logger.warning(f"Restaurant not found with phone number: {phone}")
+            return None
+            
+        # Convert database model to schema model for API responses
+        restaurant = RestaurantSchema(
+            id=restaurant_db.id,
+            name=restaurant_db.name,
+            address=restaurant_db.address or "",
+            phone=restaurant_db.phone or "",
+            timezone=restaurant_db.timezone if hasattr(restaurant_db, 'timezone') else "America/Chicago"
+        )
+        
+        return restaurant
+    except Exception as e:
+        logger.error(f"Error fetching restaurant by phone {phone}: {e}")
+        db.close()
+        return None
 
-def get_all_restaurants() -> List[Restaurant]:
+def get_all_restaurants() -> List[RestaurantSchema]:
     """
-    Get all restaurants.
+    Get all restaurants from the database.
     
     Returns:
         A list of all restaurants
     """
-    return list(_restaurants.values())
-
-def create_restaurant(restaurant: Restaurant) -> Restaurant:
-    """
-    Create a new restaurant.
-    
-    Args:
-        restaurant: The restaurant to create
+    try:
+        db = SessionLocal()
+        restaurants_db = db.query(RestaurantModel).all()
+        db.close()
         
-    Returns:
-        The created restaurant
-    """
-    if not restaurant.id:
-        import uuid
-        restaurant.id = str(uuid.uuid4())
-    _restaurants[restaurant.id] = restaurant
-    logger.info(f"Created restaurant: {restaurant.name} (ID: {restaurant.id})")
-    return restaurant
+        # Convert database models to schema models for API responses
+        restaurants = []
+        for restaurant_db in restaurants_db:
+            restaurant = RestaurantSchema(
+                id=restaurant_db.id,
+                name=restaurant_db.name,
+                address=restaurant_db.address or "",
+                phone=restaurant_db.phone or "",
+                timezone=restaurant_db.timezone if hasattr(restaurant_db, 'timezone') else "America/Chicago"
+            )
+            restaurants.append(restaurant)
+            
+        return restaurants
+    except Exception as e:
+        logger.error(f"Error fetching all restaurants: {e}")
+        db.close()
+        return []
 
-def update_restaurant(restaurant_id: str, restaurant_data: Dict) -> Optional[Restaurant]:
+# Alias for backwards compatibility
+# The default_restaurant concept is removed - calls should explicitly specify a restaurant
+# This could be used to provide a "default" restaurant if absolutely necessary
+def get_default_restaurant() -> Optional[RestaurantSchema]:
     """
-    Update an existing restaurant.
+    Get a default restaurant, if needed for backwards compatibility.
+    In production, all calls should be tied to a specific restaurant.
+    """
+    logger.warning("get_default_restaurant() called - this is deprecated")
     
-    Args:
-        restaurant_id: The ID of the restaurant to update
-        restaurant_data: The updated restaurant data
+    try:
+        db = SessionLocal()
+        # Get the first restaurant in the database - highly non-deterministic!
+        # In practice, you should ALWAYS specify a restaurant rather than using this fallback.
+        restaurant_db = db.query(RestaurantModel).first()
+        db.close()
         
-    Returns:
-        The updated restaurant or None if not found
-    """
-    existing = get_restaurant_by_id(restaurant_id)
-    if not existing:
+        if not restaurant_db:
+            logger.warning("No restaurants found in database to use as default!")
+            return None
+            
+        # Convert database model to schema model for API responses
+        restaurant = RestaurantSchema(
+            id=restaurant_db.id,
+            name=restaurant_db.name,
+            address=restaurant_db.address or "",
+            phone=restaurant_db.phone or "",
+            timezone=restaurant_db.timezone if hasattr(restaurant_db, 'timezone') else "America/Chicago"
+        )
+        
+        return restaurant
+    except Exception as e:
+        logger.error(f"Error fetching default restaurant: {e}")
+        db.close()
         return None
-    
-    updated = Restaurant(**{**existing.dict(), **restaurant_data})
-    _restaurants[restaurant_id] = updated
-    logger.info(f"Updated restaurant: {updated.name} (ID: {restaurant_id})")
-    return updated
 
-def delete_restaurant(restaurant_id: str) -> bool:
-    """
-    Delete a restaurant.
-    
-    Args:
-        restaurant_id: The ID of the restaurant to delete
-        
-    Returns:
-        True if the restaurant was deleted, False otherwise
-    """
-    if restaurant_id in _restaurants:
-        restaurant = _restaurants[restaurant_id]
-        del _restaurants[restaurant_id]
-        logger.info(f"Deleted restaurant: {restaurant.name} (ID: {restaurant_id})")
-        return True
-    return False
-
-# Initialize the default restaurant
-default_restaurant = initialize_default_restaurant()
+# The default fallback value is now a function call
+default_restaurant = get_default_restaurant()

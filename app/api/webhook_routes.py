@@ -4,19 +4,21 @@ Webhook API routes for Pulsara IVR v2.
 
 import json
 from typing import Dict, Any
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request, HTTPException, Depends
+from sqlalchemy.orm import Session
 from app.utils.logging import get_logger
 from app.core.restaurant import get_restaurant_by_id
 from app.core.call import get_call_by_sid, update_call
 from app.services.twilio import send_hangup_message, forward_call
 from app.api.call_routes import active_connections, active_conversations
+from app.db import get_db
 
 logger = get_logger(__name__)
 
 router = APIRouter()
 
 @router.post("/tools/end_call")
-async def end_call_webhook(request: Request):
+async def end_call_webhook(request: Request, db: Session = Depends(get_db)):
     """
     Webhook endpoint for the end_call tool.
     
@@ -85,7 +87,7 @@ async def end_call_webhook(request: Request):
     return {"status": "error", "message": "No active call found to terminate"}
 
 @router.get("/tools/get_address")
-async def get_address_webhook(request: Request):
+async def get_address_webhook(request: Request, db: Session = Depends(get_db)):
     """
     Webhook endpoint for the get_address tool.
     
@@ -105,20 +107,20 @@ async def get_address_webhook(request: Request):
         call = get_call_by_sid(call_sid)
         if call:
             # Get the restaurant
-            from app.core.restaurant import get_restaurant_by_id
             restaurant = get_restaurant_by_id(call.restaurant_id)
-            if restaurant:
+            if restaurant and restaurant.address:
                 logger.info(f"[WEBHOOK] Returning address: {restaurant.address}")
                 return {"status": "success", "message": restaurant.address}
+            else:
+                logger.warning(f"[WEBHOOK] Restaurant found but address is missing")
+                return {"status": "error", "message": "This restaurant has not set up their address information"}
     
-    # If we couldn't find the restaurant, return a default address
-    # This is a fallback to ensure the agent can still respond
-    default_address = "1509 W Taylor St, Chicago, IL 60607"
-    logger.warning(f"[WEBHOOK] Returning default address: {default_address}")
-    return {"status": "success", "message": default_address}
+    # If we couldn't find the restaurant or there's no active call, return an error
+    logger.warning(f"[WEBHOOK] Could not determine restaurant for address request")
+    return {"status": "error", "message": "Could not determine restaurant address"}
 
 @router.post("/tools/forward_call")
-async def forward_call_webhook(request: Request):
+async def forward_call_webhook(request: Request, db: Session = Depends(get_db)):
     """
     Webhook endpoint for the forward_call tool.
     
@@ -168,6 +170,11 @@ async def forward_call_webhook(request: Request):
                             "forwarded_time": get_current_time()
                         })
                         
+                        # Check if restaurant has a phone number to forward to
+                        if not restaurant.phone:
+                            logger.error(f"[WEBHOOK] Restaurant {restaurant.name} does not have a phone number configured")
+                            return {"status": "error", "message": "Restaurant doesn't have a phone number configured"}
+                        
                         # Forward the call
                         success = forward_call(call_sid, restaurant.phone)
                         
@@ -205,7 +212,7 @@ async def forward_call_webhook(request: Request):
     return {"status": "error", "message": "No active call found to forward"}
 
 @router.post("/elevenlabs/conversation_initiation")
-async def elevenlabs_conversation_initiation(request: Request):
+async def elevenlabs_conversation_initiation(request: Request, db: Session = Depends(get_db)):
     """
     Webhook called by ElevenLabs when a conversation is initiated.
     
@@ -229,7 +236,7 @@ async def elevenlabs_conversation_initiation(request: Request):
     return response_data
 
 @router.post("/elevenlabs/{restaurant_id}/conversation_initiation")
-async def restaurant_conversation_initiation(restaurant_id: str, request: Request):
+async def restaurant_conversation_initiation(restaurant_id: str, request: Request, db: Session = Depends(get_db)):
     """
     Restaurant-specific webhook called by ElevenLabs when a conversation is initiated.
     

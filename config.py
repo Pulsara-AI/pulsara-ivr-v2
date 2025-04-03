@@ -10,6 +10,9 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
+# Database Configuration
+DATABASE_URL = os.getenv("DATABASE_URL")
+
 # ElevenLabs Configuration
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
 ELEVENLABS_AGENT_ID = os.getenv("ELEVENLABS_AGENT_ID")
@@ -18,20 +21,12 @@ ELEVENLABS_AGENT_ID = os.getenv("ELEVENLABS_AGENT_ID")
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
 
-# Restaurant Information
-RESTAURANT_OWNER_PHONE = os.getenv("RESTAURANT_OWNER_PHONE", "224-651-4178")
-RESTAURANT_ADDRESS = os.getenv("RESTAURANT_ADDRESS", "1509 W Taylor St, Chicago, IL 60607")
-RESTAURANT_NAME = os.getenv("RESTAURANT_NAME", "Pulsara Restaurant")
-
 # Time Zone Configuration
-TIMEZONE = pytz.timezone('America/Chicago')  # CST
-
-# Voice Configuration
-VOICE_ID = "tnSpp4vdxKPjI9w0GnoV"  # Default voice ID
+DEFAULT_TIMEZONE = pytz.timezone('America/Chicago')  # Default timezone for time formatting
 
 # Server Configuration
-HOST = "0.0.0.0"
-PORT = 8000
+HOST = os.getenv("HOST", "0.0.0.0")
+PORT = int(os.getenv("PORT", "8000"))
 
 # Logging Configuration
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")

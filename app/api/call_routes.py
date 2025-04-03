@@ -10,17 +10,18 @@ from fastapi import APIRouter, Request, WebSocket, Depends, HTTPException
 from fastapi.responses import HTMLResponse
 from starlette.websockets import WebSocketDisconnect
 from twilio.twiml.voice_response import VoiceResponse, Connect
-# Remove SDK imports
+from sqlalchemy.orm import Session
 
 from app.utils.logging import get_logger
 from app.utils.helpers import generate_connection_id, get_current_time
 from app.services.audio_interface import TwilioAudioInterface
 from app.services.twilio import set_call_context, send_hangup_message
 from app.services.elevenlabs import get_system_prompt_template, get_first_message_template, create_conversation
-from app.core.restaurant import get_restaurant_by_id, get_restaurant_by_phone
-from app.core.agent import get_agent_by_restaurant
+from app.core.restaurant import get_restaurant_by_id, get_restaurant_by_phone, get_default_restaurant
+from app.core.agent import get_agent_by_restaurant, get_default_agent 
 from app.core.call import create_call, update_call, end_call, get_active_call_by_sid
-from app.core.settings import get_settings
+from app.core.settings import get_settings, get_default_settings
+from app.db import get_db
 from config.environment import ELEVENLABS_API_KEY
 
 logger = get_logger(__name__)
@@ -34,7 +35,7 @@ active_connections = {}
 active_conversations = {}
 
 @router.post("/inbound_call")
-async def handle_incoming_call(request: Request):
+async def handle_incoming_call(request: Request, db: Session = Depends(get_db)):
     """
     Handle an incoming call from Twilio.
     
@@ -52,8 +53,13 @@ async def handle_incoming_call(request: Request):
     restaurant = get_restaurant_by_phone(to_number)
     if not restaurant:
         # Use default restaurant if no match found
-        from app.core.restaurant import default_restaurant
-        restaurant = default_restaurant
+        restaurant = get_default_restaurant()
+        if not restaurant:
+            # If no default restaurant either, return a helpful message
+            response = VoiceResponse()
+            response.say("We're sorry, but the number you've called is not associated with any restaurant in our system.")
+            response.hangup()
+            return HTMLResponse(content=str(response), media_type="application/xml")
         logger.warning(f"No restaurant found for phone number {to_number}, using default")
     
     # Check if the restaurant is within operating hours
@@ -85,11 +91,19 @@ async def handle_incoming_call(request: Request):
             return HTMLResponse(content=str(response), media_type="application/xml")
     
     # Create a call record
-    call = create_call(
-        restaurant_id=restaurant.id,
-        call_sid=call_sid,
-        caller_number=from_number
-    )
+    try:
+        call = create_call(
+            restaurant_id=restaurant.id,
+            call_sid=call_sid,
+            caller_number=from_number
+        )
+    except Exception as e:
+        logger.error(f"Error creating call record: {e}")
+        # Return a helpful message if call record creation fails
+        response = VoiceResponse()
+        response.say(f"We apologize, but we're experiencing a technical issue. Please try your call again in a few minutes.")
+        response.hangup()
+        return HTMLResponse(content=str(response), media_type="application/xml")
     
     # Generate TwiML to connect to our WebSocket endpoint
     response = VoiceResponse()
@@ -107,7 +121,7 @@ async def handle_incoming_call(request: Request):
     return HTMLResponse(content=str(response), media_type="application/xml")
 
 @router.websocket("/media-stream")
-async def handle_media_stream(websocket: WebSocket):
+async def handle_media_stream(websocket: WebSocket, db: Session = Depends(get_db)):
     """
     Handle the WebSocket connection for a Twilio Media Stream.
     

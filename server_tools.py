@@ -13,6 +13,12 @@ import os
 from typing import Dict, Any
 from dotenv import load_dotenv
 from twilio.rest import Client
+from sqlalchemy.orm import Session
+
+# For database access
+from app.db import SessionLocal
+from app.models.database_models import Restaurant as RestaurantModel
+from app.core.restaurant import get_restaurant_by_id
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, 
@@ -185,9 +191,10 @@ async def end_call(custom_state: Dict[str, Any] = None, params: Dict[str, Any] =
 
 async def get_address(custom_state: Dict[str, Any] = None, params: Dict[str, Any] = None) -> Dict[str, Any]:
     """
-    Get the restaurant address.
+    Get the restaurant address from the database.
     
     This server-side tool returns the restaurant's address when invoked by the agent.
+    It uses the restaurant_id from the custom_state to fetch the address from the database.
     
     Args:
         custom_state: The custom state passed to the conversation (contains connection_info)
@@ -200,13 +207,36 @@ async def get_address(custom_state: Dict[str, Any] = None, params: Dict[str, Any
         # Get connection information from custom state
         connection_info = custom_state.get("connection_info", {}) if custom_state else {}
         connection_id = connection_info.get("connection_id", "unknown")
+        restaurant_id = connection_info.get("restaurant_id")
         
         # Make this very visible in the logs when agent explicitly uses the tool
         logger.info(f"[CONN:{connection_id}] ★★★ AGENT USED get_address SERVER TOOL ★★★")
         logger.info(f"[CONN:{connection_id}] Tool calling is working! Agent successfully used a tool.")
         
-        # Return the restaurant address
-        address = "1509 W Taylor St, Chicago, IL 60607"
+        # Validate restaurant_id
+        if not restaurant_id:
+            logger.warning(f"[CONN:{connection_id}] No restaurant_id in connection_info")
+            return {
+                "status": "error",
+                "message": "Restaurant information not available"
+            }
+        
+        # Fetch restaurant address from database
+        db = SessionLocal()
+        try:
+            restaurant = db.query(RestaurantModel).filter(RestaurantModel.id == restaurant_id).first()
+            if restaurant and restaurant.address:
+                address = restaurant.address
+                logger.info(f"[CONN:{connection_id}] Found address in database: {address}")
+            else:
+                logger.warning(f"[CONN:{connection_id}] Restaurant or address not found in database for ID: {restaurant_id}")
+                return {
+                    "status": "error",
+                    "message": "This restaurant has not set up their address information"
+                }
+        finally:
+            db.close()
+        
         logger.info(f"[CONN:{connection_id}] Returning address: {address}")
         
         return {

@@ -2,12 +2,14 @@
 Health check API routes for Pulsara IVR v2.
 """
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Depends
+from sqlalchemy.orm import Session
 from app.utils.logging import get_logger
 from app.api.call_routes import active_connections, active_conversations
 from app.core.restaurant import get_all_restaurants
 from app.core.agent import get_agent_by_restaurant
 from app.core.call import get_call_statistics
+from app.db import get_db
 from config.environment import ELEVENLABS_API_KEY, TWILIO_ACCOUNT_SID
 
 logger = get_logger(__name__)
@@ -15,7 +17,7 @@ logger = get_logger(__name__)
 router = APIRouter()
 
 @router.get("/health")
-async def health_check():
+async def health_check(db: Session = Depends(get_db)):
     """
     Health check endpoint.
     
@@ -46,11 +48,12 @@ async def health_check():
         "twilio_account_sid_set": twilio_account_sid_set,
         "active_calls": active_call_count,
         "restaurants": restaurant_count,
-        "restaurants_with_agents": restaurants_with_agents
+        "restaurants_with_agents": restaurants_with_agents,
+        "database_connection": "ok"
     }
 
 @router.get("/status")
-async def service_status():
+async def service_status(db: Session = Depends(get_db)):
     """
     Detailed service status endpoint.
     
@@ -99,11 +102,12 @@ async def service_status():
             "count": active_call_count,
             "calls": active_call_info
         },
-        "restaurants": restaurant_info
+        "restaurants": restaurant_info,
+        "database_connection": "ok"
     }
 
 @router.get("/metrics")
-async def metrics():
+async def metrics(db: Session = Depends(get_db)):
     """
     Metrics endpoint.
     

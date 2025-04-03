@@ -4,16 +4,14 @@ Agent management module for Pulsara IVR v2.
 
 import json
 from typing import Dict, Optional, List, Any
-from app.models.schemas import Agent
-from config.settings import AGENT
+from app.models.schemas import Agent as AgentSchema
+from app.models.database_models import Restaurant as RestaurantModel
+from app.db import get_db, SessionLocal
 from app.utils.logging import get_logger
 from app.core.restaurant import get_restaurant_by_id
+import uuid
 
 logger = get_logger(__name__)
-
-# In-memory agent cache
-# This will be replaced with a database in the future
-_agents = {}
 
 def get_system_prompt(restaurant_id: str) -> Dict[str, Any]:
     """
@@ -39,7 +37,9 @@ def get_system_prompt(restaurant_id: str) -> Dict[str, Any]:
     # Replace placeholders with restaurant-specific values
     if "workplace" in template:
         template["workplace"]["restaurantName"] = restaurant.name
-        template["workplace"]["location"] = restaurant.address.split(",")[-2].strip()
+        if restaurant.address:
+            city_state = restaurant.address.split(",")[-2].strip() if len(restaurant.address.split(",")) > 1 else ""
+            template["workplace"]["location"] = city_state
     
     # Get restaurant settings
     from app.core.settings import get_settings
@@ -76,125 +76,110 @@ def get_agent_tools() -> List[Dict[str, Any]]:
         }
     ]
 
-def get_agent_by_id(agent_id: str) -> Optional[Agent]:
+def get_agent_by_restaurant(restaurant_id: str) -> Optional[AgentSchema]:
     """
-    Get an agent by ID.
+    Get an agent configuration by restaurant ID.
     
-    Args:
-        agent_id: The agent ID
-        
-    Returns:
-        The agent or None if not found
-    """
-    return _agents.get(agent_id)
-
-def get_agent_by_restaurant(restaurant_id: str) -> Optional[Agent]:
-    """
-    Get an agent by restaurant ID.
+    This function fetches the restaurant from the database and uses its
+    elevenlabsAgentId and voiceId to construct an Agent object.
     
     Args:
         restaurant_id: The restaurant ID
         
     Returns:
-        The agent or None if not found
+        The agent configuration or None if not found
     """
-    for agent in _agents.values():
-        if agent.restaurant_id == restaurant_id:
-            return agent
+    if not restaurant_id:
+        logger.warning("Tried to get agent with empty restaurant ID")
+        return None
+        
+    try:
+        db = SessionLocal()
+        restaurant = db.query(RestaurantModel).filter(RestaurantModel.id == restaurant_id).first()
+        db.close()
+        
+        if not restaurant:
+            logger.warning(f"Restaurant not found with ID: {restaurant_id}")
+            return None
+            
+        # Check if the restaurant has the necessary agent configuration
+        if not restaurant.elevenlabsAgentId:
+            logger.warning(f"Restaurant {restaurant.name} (ID: {restaurant_id}) does not have an ElevenLabs Agent ID configured")
+            return None
+            
+        # Construct an agent configuration from the restaurant's fields
+        agent_id = str(uuid.uuid4())  # Generate a local ID for this agent config
+        
+        # In SQLAlchemy, systemPrompt might be a string or might not exist
+        system_prompt = {}
+        if hasattr(restaurant, 'systemPrompt') and restaurant.systemPrompt:
+            try:
+                # Try to parse as JSON if it's stored as a string
+                if isinstance(restaurant.systemPrompt, str):
+                    system_prompt = json.loads(restaurant.systemPrompt)
+                else:
+                    system_prompt = restaurant.systemPrompt
+            except (json.JSONDecodeError, TypeError):
+                # If parsing fails, generate a system prompt
+                system_prompt = get_system_prompt(restaurant_id)
+        else:
+            # Generate a system prompt if none exists
+            system_prompt = get_system_prompt(restaurant_id)
+            
+        agent = AgentSchema(
+            id=agent_id,
+            restaurant_id=restaurant_id,
+            elevenlabs_agent_id=restaurant.elevenlabsAgentId,
+            name=f"Pulsara for {restaurant.name}",
+            voice_id=restaurant.voiceId or "EXAVITQu4vr4xnSDxMaL",  # Default voice ID if not set
+            system_prompt=system_prompt,
+            tools=get_agent_tools()
+        )
+        
+        return agent
+    except Exception as e:
+        logger.error(f"Error fetching agent for restaurant ID {restaurant_id}: {e}")
+        db.close()
+        return None
+        
+def get_agent_by_id(agent_id: str) -> Optional[AgentSchema]:
+    """
+    This function is only included for API compatibility.
+    In the shared DB architecture, agents aren't stored separately but
+    derived from restaurant records.
+    
+    Args:
+        agent_id: The agent ID (which would be the restaurant ID in this case)
+        
+    Returns:
+        Always returns None as we don't store separate agents
+    """
+    logger.warning(f"get_agent_by_id() called with {agent_id} - not supported in shared DB architecture")
     return None
 
-def create_agent(restaurant_id: str, name: str = None) -> Agent:
+# For backwards compatibility, provide a way to get a default agent
+def get_default_agent() -> Optional[AgentSchema]:
     """
-    Create a new agent for a restaurant.
+    Get a default agent from the first available restaurant.
+    This should only be used in fallback scenarios where a specific restaurant is not known.
+    """
+    logger.warning("get_default_agent() called - this is deprecated")
     
-    Args:
-        restaurant_id: The restaurant ID
-        name: The agent name (optional)
+    try:
+        # Get the first restaurant
+        db = SessionLocal()
+        restaurant = db.query(RestaurantModel).first()
+        db.close()
         
-    Returns:
-        The created agent
-    """
-    # Get the restaurant
-    restaurant = get_restaurant_by_id(restaurant_id)
-    if not restaurant:
-        raise ValueError(f"Restaurant not found for ID: {restaurant_id}")
-    
-    # Generate a name if not provided
-    if not name:
-        name = f"Pulsara for {restaurant.name}"
-    
-    # Create the agent
-    agent = Agent(
-        restaurant_id=restaurant_id,
-        elevenlabs_agent_id=AGENT["elevenlabs_agent_id"],
-        name=name,
-        voice_id=AGENT["voice_id"],
-        system_prompt=get_system_prompt(restaurant_id),
-        tools=get_agent_tools()
-    )
-    
-    # Generate an ID if not provided
-    if not agent.id:
-        import uuid
-        agent.id = str(uuid.uuid4())
-    
-    # Store the agent
-    _agents[agent.id] = agent
-    logger.info(f"Created agent: {agent.name} (ID: {agent.id}) for restaurant: {restaurant.name}")
-    
-    return agent
-
-def update_agent(agent_id: str, agent_data: Dict) -> Optional[Agent]:
-    """
-    Update an existing agent.
-    
-    Args:
-        agent_id: The ID of the agent to update
-        agent_data: The updated agent data
-        
-    Returns:
-        The updated agent or None if not found
-    """
-    existing = get_agent_by_id(agent_id)
-    if not existing:
+        if not restaurant:
+            logger.warning("No restaurants found to construct a default agent")
+            return None
+            
+        # Use get_agent_by_restaurant to construct the agent
+        return get_agent_by_restaurant(restaurant.id)
+    except Exception as e:
+        logger.error(f"Error getting default agent: {e}")
         return None
-    
-    updated = Agent(**{**existing.dict(), **agent_data})
-    _agents[agent_id] = updated
-    logger.info(f"Updated agent: {updated.name} (ID: {agent_id})")
-    return updated
 
-def delete_agent(agent_id: str) -> bool:
-    """
-    Delete an agent.
-    
-    Args:
-        agent_id: The ID of the agent to delete
-        
-    Returns:
-        True if the agent was deleted, False otherwise
-    """
-    if agent_id in _agents:
-        agent = _agents[agent_id]
-        del _agents[agent_id]
-        logger.info(f"Deleted agent: {agent.name} (ID: {agent_id})")
-        return True
-    return False
-
-def initialize_default_agent():
-    """
-    Initialize the default agent for the default restaurant.
-    """
-    from app.core.restaurant import default_restaurant
-    
-    # Check if an agent already exists for the default restaurant
-    existing_agent = get_agent_by_restaurant(default_restaurant.id)
-    if existing_agent:
-        logger.info(f"Default agent already exists: {existing_agent.name}")
-        return existing_agent
-    
-    # Create a new agent for the default restaurant
-    return create_agent(default_restaurant.id)
-
-# Initialize the default agent
-default_agent = initialize_default_agent()
+# Alias for backwards compatibility
+default_agent = get_default_agent()
